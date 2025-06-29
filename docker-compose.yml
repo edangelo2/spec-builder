@@ -1,0 +1,49 @@
+version: "3.9"
+services:
+  streamlit-app:
+    build: ./frontend
+    environment:
+      - API_BASE_URL=http://backend:8000
+    networks: [spec-net]
+    depends_on: [backend]
+
+  backend:
+    build: ./backend
+    env_file: .env
+    networks: [spec-net]
+
+  activepieces:
+    image: activepieces/activepieces:latest
+    volumes: [ap-data:/var/lib/activepieces]
+    env_file: .env
+    networks: [spec-net]
+
+  langchain-worker:
+    build: ./langchain_worker
+    env_file: .env
+    networks: [spec-net]
+    depends_on: [vector_api]
+
+  vector_api:
+    build: ./vector_api
+    env_file: .env
+    networks: [spec-net]
+    depends_on: [chroma_db]
+
+  chroma_db:
+    image: chromadb/chroma
+    volumes: [chroma-data:/chroma]
+    networks: [spec-net]
+
+  ollama:                 # only when OFFLINE_MODE=true
+    image: ollama/ollama
+    volumes: ["ollama-data:/root/.ollama"]
+    networks: [spec-net]
+    profiles: ["offline"]
+
+networks:
+  spec-net: {}
+volumes:
+  ap-data: {}
+  chroma-data: {}
+  ollama-data: {}

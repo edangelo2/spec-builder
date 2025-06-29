@@ -1,0 +1,141 @@
+1 Presentation Layer — Streamlit GUI
+Sub-component	Purpose	Interactions
+File-uploader	Accept .docx spec and post to ingestion endpoint	FastAPI micro-route inside the container
+Section navigator & status badges	Show canonical sections plus 🔴/🟡/🟢 state	Calls Activepieces REST /sections (token-auth)
+Before / After panes & diff viewer	Compare raw vs. refined text	Receives JSON payloads from Activepieces
+“Refine” button	Trigger refinement run for selected section	POST /refine (JWT in header)
+
+Auth hook-up
+OIDC client (streamlit-auth-component) authenticates against Keycloak; the returned JWT is attached to every request to backend services.
+
+2 Auth & Security Layer — Keycloak + Traefik
+Element	Responsibility	Notes
+Keycloak	User store, roles (analyst, admin), token issuance	Runs in its own container with PostgreSQL volume
+Traefik (edge proxy)	TLS termination, OIDC-aware forward-auth middleware	Routes /api/* to Activepieces / LangChain workers
+
+Advantages Open-source (Apache-2.0 / MIT), supports fine-grained RBAC, single-sign-on across all internal tools.
+
+3 Document Ingestion & Sectioning — unstructured
+Same flow as before.
+Outputs spec_schema.json, stored in Activepieces DB for state tracking and embedded into the Vector store (next layer).
+
+4 Vector Memory Layer — Sentence-Transformers + Chroma (or pgvector)
+Sub-component	Purpose	How it plugs in
+Embedder (sentence-transformers/all-minilm-l6-v2)	Turns every section (and later iterations) into vectors	Invoked by Activepieces after each refinement
+Vector DB (chroma_db container or pgvector extension in Postgres)	Stores embeddings keyed by spec-id + section	Queried via LangChain VectorStoreRetriever
+Retriever	Supplies relevant previous context or similar specs to prompts	LangChain loads it inside each refinement call
+
+Why? Supports cross-spec recall, prevents forgetting across long editing sessions, and is fully OSS with simple Docker images.
+
+5 Workflow Orchestration — Activepieces
+Unchanged core logic plus two extra nodes:
+
+“Embed Section” – posts latest text to the Vector Memory API.
+
+“Auth Check” – ensures the incoming JWT scope allows refinement actions.
+
+6 LLM Interaction Layer — LangChain Worker
+Module	Responsibility
+Prompt templates & memory	Same as before; now enriched with vector-retrieved context chunks.
+LLMRouter	Chooses provider: cloud GPT-4o / Claude 3 / Gemini or offline llama-cpp endpoint (see next layer).
+OfflineSwitch	Reads OFFLINE_MODE=true env var; if set, restricts router to local models only.
+
+7 Offline-LLM Mode (Optional)
+Container	Image / Tool	Role
+ollama-server (or) llama-cpp-server	ollama/ollama or ghcr.io/ggerganov/llama-cpp-server	Hosts Mixtral-8x7B, Llama-3-70B-Instruct, etc., exposing an OpenAI-compatible REST interface (/v1/chat/completions).
+GPU/CPU scheduling	Docker runtime with NVIDIA or CPU fallback	Scale replicas based on requests
+
+Routing logic:
+LangChain-worker -> OfflineSwitch -> client = OpenAI(base_url="http://ollama:11434", api_key="LOCAL")
+
+Benefits: No data leaves the VPC; enables air-gapped deployments, cost predictability, and experimentation with fine-tuned local models.
+
+8 Infrastructure & Deployment — Docker Compose (excerpt)
+yaml
+Copy
+Edit
+services:
+  traefik:
+    image: traefik:v3
+    command: --providers.docker --entrypoints.websecure.address=:443
+    ports: ["443:443"]
+    networks: [spec-net]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command: start-dev
+    env_file: .env
+    networks: [spec-net]
+
+  streamlit-app:
+    build: ./frontend
+    environment:
+      - OIDC_AUTH_URL=https://keycloak/auth/realms/spec/protocol/openid-connect/auth
+    networks: [spec-net]
+
+  activepieces:
+    image: activepieces/activepieces:latest
+    volumes: [ap-data:/var/lib/activepieces]
+    env_file: .env
+    networks: [spec-net]
+
+  langchain-worker:
+    build: ./langchain
+    env_file: .env
+    networks: [spec-net]
+
+  chroma_db:
+    image: chromadb/chroma
+    volumes: [chroma-data:/chroma]
+    networks: [spec-net]
+
+  ollama:            # present only when OFFLINE_MODE=true
+    image: ollama/ollama
+    volumes: ["ollama-data:/root/.ollama"]
+    networks: [spec-net]
+
+networks: { spec-net: {} }
+volumes: { ap-data: {}, chroma-data: {}, ollama-data: {} }
+9 End-to-End Flow (Happy Path with Vector & Auth)
+Login
+Analyst authenticates through Traefik → Keycloak. Streamlit stores JWT.
+
+Upload spec
+Streamlit (/ingest) → unstructured → spec_schema.json.
+
+Embed
+Activepieces step calls Vector API to POST /upsert embeddings.
+
+Refine click
+Streamlit POST /refine → Activepieces; JWT validated.
+
+Activepieces workflow
+
+state=in-review
+
+Retrieve context vectors for this section → add to payload
+
+HTTP call to LangChain worker.
+
+LangChain
+
+Combines prompt, vector context & memory.
+
+Router chooses cloud GPT-4o or offline llama-cpp depending on OFFLINE_MODE.
+
+Returns refined_text, risk_flags.
+
+Persist & notify
+Activepieces stores refined text, state=approved, re-embeds the new version, and streams update to Streamlit.
+
+GUI diff update
+Streamlit receives push (SSE/WebSocket) or polls; badges turn 🟢, pane refreshes.
+
+How the Add-ons Strengthen the Solution
+Concern	Added component(s)	Payoff
+Security & RBAC	Keycloak + Traefik	Central identity, SSO, token-level permissions; meets enterprise audit needs.
+Knowledge retention & contextual quality	Sentence-Transformers + Chroma/pgvector	Section-level embeddings supply retrieval-augmented context, improving answer consistency across iterations and related specs.
+Data-sovereignty / connectivity risk	Offline LLM containers	Keeps sensitive docs on-prem, enables work in low-connectivity environments, and offers controllable cost.
+Maintainability & low-code iteration	Activepieces visual flows + Keycloak OIDC plug-ins	Non-engineers adjust business logic; security team manages roles without code changes.
+
+This revised blueprint preserves the clean separation of responsibilities while embedding enterprise-grade authentication, long-term vector memory, and an offline AI pathway—all with 100 % open-source bricks packaged in a single, repeatable Docker-Compose stack.

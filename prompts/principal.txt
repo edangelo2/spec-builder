@@ -1,0 +1,58 @@
+Quiero establecer un workflow de procesamiento de especificaciones que utilice IA para mejorar la redaccion del documento 
+y el formato de dicha especificacion en un standard corporativo.
+Quiero ponerlo foco al workflow descripto a continuación, dime si lo comprendes o necesitas mas contexto para acotarlo a lo que quiero lograr:
+
+4.	Elaboración de especificaciones funcionales e interfaces
+A partir de las minutas de relevamiento y la documentación entregada por el cliente se elaboran especificaciones funcionales que describen detalladamente los cambios a desarrollar. El contenido de los documentos varía si se trata de una especificación de un cambio en el sistema o de una interfaz con otro sistema. Es por eso que se generan dos tipos de documentos:
+BFS – Business Functional Specification
+El documento BFS describe los cambios solicitados al sistema incluyendo los siguientes detalles:
+a.	Requerimientos
+Descripción de los requerimientos que se resuelven con la funcionalidad especificada en el documento.
+
+b.	Introducción Funcional
+Background de negocio necesario para entender la funcionalidad a desarrollar.
+
+c.	Descripción de procesos de negocios
+Descripción de los procesos de negocios, flujos operativos y detalle de casos de uso del sistema (especificados con metodología de casos de uso o descripción narrada).
+
+d.	Diseño funcional
+Descripción de los cambios a realizar en el sistema indicando:
+i.	Prototipos de pantallas de la nueva funcionalidad.
+ii.	Descripción del contenido y  uso de las pantallas del prototipo. 
+iii.	Descripción de validaciones a realizar.
+iv.	Descripción de procesos de cálculo incluyendo detalle de fórmulas de cálculo utilizadas (ej.: calculo de comisiones, impuestos, etc.) y prototipos en excel para validarlos.
+v.	Descripción de reportes indicando filtros, contenido de columnas y vistas posibles de la información.
+
+EIS – External Inteface Specification
+El documento EIS describe los cambios solicitados al sistema para integrarlo con otros sistemas indicando lo siguiente:
+a.	Requerimientos
+Descripción de los requerimientos que se resuelven con la funcionalidad especificada en el documento.
+
+b.	Descripción General
+Descripción del propósito de la interfaz, indicando los sistemas que conecta y información que intercambia y funcionamiento de manera general.
+
+c.	Descripción de la tecnología
+Descripción de la tecnología utilizada por la interfaz incluyendo el middleware utilizado, protocolos y mecanismos de comunicación entre los sistemas, tipo de formatos de los mensajes que se intercambian, etc. 
+
+d.	Dinámica y frecuencia de ejecución de la interface
+
+Descripción del funcionamiento de la interfaz indicando:
+i.	Flujos operativos normales y momentos/casos de uso que disparan la ejecución de la interfaz.
+ii.	Flujos de error y procesos de contingencia y recuperación ante errores. 
+iii.	Diagramas de transición de estados de los mensajes de la interfaz. 
+iv.	Funcionalidades de monitoreo y log de errores.
+
+e.	Detalle de Formatos de los mensajes
+Detalle del contendido de cada campo de la interface a construir: nombre de campo, descripción, formato, obligatoriedad. La especificación incluye ejemplos reales de los mensajes/archivos descriptos.
+5.	Elaboración de casos de prueba
+Tanto para nuevas funcionalidades como para interfaces se elaborarán los casos de prueba que permitan validar con los usuarios que la funcionalidad desarrollada cumple con solicitado. Cada casos de prueba será descripto indicando el objetivo de lo que intenta probar, los pasos para ejecutar el caso y los resultados esperados. 
+6.	Revisión preliminar con equipo de producto de Lumina
+Antes de entregar la especificación al cliente se revisan con el equipo de producto de Lumina que verificará que lo especificado es acorde a los lineamientos de diseño del producto. Eventualmente pueden surgir cambios o modificaciones propuestas por el equipo de producto de Lumina.
+7.	Revisión de especificaciones y casos de prueba con el Cliente (walkthrough)
+Las especificaciones y casos de prueba se revisan con el cliente en reuniones donde se lee y explica el documento y se aclaran las dudas que puedan surgir en el momento y se realizan los ajustes necesarios.
+8.	Revisión final equipo de producto de Lumina
+La versión final con el feedback del usuario vuelve a revisarse con el equipo de producto hasta obtener la especificación acordada con el cliente y el producto.
+9.	Revisión final con el usuario y sign-off 
+El cliente envía un email dando conformidad de la versión final de la especificación que se enviará para el proceso de desarrollo y los casos de prueba que utilizará para validar el cambio solicitado cuando se le entregue la versión.
+
+

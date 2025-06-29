@@ -1,0 +1,76 @@
+{
+  "version": "0.20.0",
+  "type": "FLOW",
+  "name": "Spec‑Builder Flow",
+  "trigger": {
+    "type": "WEBHOOK",
+    "settings": {
+      "path": "/ingest"
+    }
+  },
+  "actions": [
+    {
+      "name": "split_section",
+      "type": "CODE",
+      "settings": {
+        "language": "python",
+        "code": "from unstructured.partition.docx import partition_docx
+
+input_file = files['file']
+chunks = partition_docx(input_file)
+store('spec_id', body['spec_id'])
+store('sections', [c.text for c in chunks])
+return {'success': True}"
+      }
+    },
+    {
+      "name": "refine_loop",
+      "type": "LOOP",
+      "settings": {
+        "list": "{{store.sections}}"
+      },
+      "actions": [
+        {
+          "name": "refine_call",
+          "type": "HTTP_REQUEST",
+          "settings": {
+            "method": "POST",
+            "url": "http://langchain-worker:8000/chat",
+            "body": {
+              "spec_id": "{{store.spec_id}}",
+              "section": "{{item.index}}",
+              "text": "{{item.value}}"
+            },
+            "headers": { "Content-Type": "application/json" }
+          }
+        },
+        {
+          "name": "upsert_call",
+          "type": "HTTP_REQUEST",
+          "settings": {
+            "method": "POST",
+            "url": "http://vector_api:8000/upsert",
+            "body": {
+              "spec_id": "{{store.spec_id}}",
+              "section": "{{item.index}}",
+              "text": "{{steps.refine_call.response.refined_text}}"
+            },
+            "headers": { "Content-Type": "application/json" }
+          }
+        },
+        {
+          "name": "notify_frontend",
+          "type": "WEBSOCKET_SEND",
+          "settings": {
+            "url": "ws://streamlit-app:8501/notify",
+            "payload": {
+              "section": "{{item.index}}",
+              "refined": "{{steps.refine_call.response.refined_text}}",
+              "risk": "{{steps.refine_call.response.risk_flags}}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

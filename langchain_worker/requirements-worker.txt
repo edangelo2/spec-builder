@@ -1,0 +1,10 @@
+langchain_worker# ---------- LLM selection ----------
+OPENAI_API_KEY=sk‑...
+OPENAI_API_BASE=https://api.openai.com/v1
+OFFLINE_MODE=false                  # true → route to ollama
+OLLAMA_BASE_URL=http://ollama:11434 # OpenAI‑compatible
+MODEL_NAME=gpt-4o                   # or mixtral‑8x7b
+
+# ---------- Vector store ----------
+VECTOR_API_URL=http://vector_api:8000
+TOP_K=5
