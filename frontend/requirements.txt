@@ -1,0 +1,5 @@
+streamlit>=1.34
+python-dotenv        # read API_BASE_URL from .env
+requests             # calls the backend
+watchdog             # fast auto-reload (Streamlit indirect dep)
+diff-match-patch     # for the planned diff viewer
